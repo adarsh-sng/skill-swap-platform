@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
+import useScrollLock from '../hooks/useScrollLock';
 
 const SwapRequestModal = ({ isOpen, onClose, targetUser, currentUser, onSubmit }) => {
   const [formData, setFormData] = useState({
     requestedSkill: '',
     offeredSkill: '',
     message: '',
-    proposedTime: ''
+    proposedTime: '',
+    proposedDay: '',
+    proposedTimeSlot: ''
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+
+  // Disable scrolling when modal is open
+  useScrollLock(isOpen);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -105,7 +111,9 @@ const SwapRequestModal = ({ isOpen, onClose, targetUser, currentUser, onSubmit }
       requestedSkill: '',
       offeredSkill: '',
       message: '',
-      proposedTime: ''
+      proposedTime: '',
+      proposedDay: '',
+      proposedTimeSlot: ''
     });
     setErrors({});
     onClose();
@@ -114,24 +122,45 @@ const SwapRequestModal = ({ isOpen, onClose, targetUser, currentUser, onSubmit }
   if (!isOpen) return null;
 
   return (
-    <div className="modal modal-open">
-      <div className="modal-box bg-black/90 backdrop-blur-lg border border-cyan-500/20 text-gray-100 max-w-2xl shadow-[0_0_50px_-12px_rgba(0,255,255,0.25)]">
-        <h3 className="font-bold text-lg mb-4 text-white">Request Skill Swap</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+      
+      {/* Modal */}
+      <div className="relative w-full max-w-2xl bg-gradient-to-br from-gray-900/95 to-gray-800/95 backdrop-blur-xl border border-cyan-500/30 rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,255,255,0.25)] animate-in fade-in-0 zoom-in-95 duration-300">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-700/50">
+          <div>
+            <h3 className="text-2xl font-bold text-white">Request Skill Swap</h3>
+            <p className="text-gray-400 text-sm mt-1">Send a request to exchange skills</p>
+          </div>
+          <button
+            onClick={handleClose}
+            disabled={isLoading}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200 disabled:opacity-50"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
         
         {/* Target User Info */}
-        <div className="bg-white/5 border border-cyan-500/20 p-4 rounded-lg mb-6">
-          <div className="flex items-center gap-3">
-            <div className="avatar placeholder">
-              <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-full w-12 border border-cyan-400/30">
-                <span className="text-lg font-bold">
-                  {targetUser?.name?.charAt(0).toUpperCase() || 'U'}
-                </span>
+        <div className="p-6 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border-b border-gray-700/50">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-cyan-500/25">
+                {targetUser?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-gray-900"></div>
             </div>
-            <div>
-              <h4 className="font-bold text-white">{targetUser?.name || 'Unknown User'}</h4>
-              <p className="text-gray-400 text-sm">{targetUser?.location || 'Location not specified'}</p>
-              <div className="flex items-center gap-2 mt-1">
+            <div className="flex-1">
+              <h4 className="font-bold text-xl text-white mb-1">{targetUser?.name || 'Unknown User'}</h4>
+              <p className="text-gray-400 text-sm mb-2">{targetUser?.location || 'Location not specified'}</p>
+              <div className="flex items-center gap-3">
                 <div className="rating rating-sm">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <input
@@ -144,7 +173,7 @@ const SwapRequestModal = ({ isOpen, onClose, targetUser, currentUser, onSubmit }
                     />
                   ))}
                 </div>
-                <span className="text-sm text-gray-400">
+                <span className="text-sm text-gray-300">
                   {targetUser?.rating || 0}/5 • {targetUser?.swapCount || 0} swaps
                 </span>
               </div>
@@ -152,18 +181,23 @@ const SwapRequestModal = ({ isOpen, onClose, targetUser, currentUser, onSubmit }
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Skills Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="label">
-                <span className="label-text text-white">I want to learn</span>
+                <span className="label-text text-white font-semibold flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" />
+                  </svg>
+                  I want to learn
+                </span>
               </label>
               <select
                 name="requestedSkill"
                 value={formData.requestedSkill}
                 onChange={handleChange}
-                className={`select select-bordered w-full bg-white/5 border-cyan-500/20 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 ${errors.requestedSkill ? 'border-red-500' : ''}`}
+                className={`select w-full bg-gray-800/50 border-cyan-500/30 text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 rounded-lg transition-all duration-200 ${errors.requestedSkill ? 'border-red-500' : ''}`}
               >
                 <option value="">Select a skill</option>
                 {targetUser?.skillsOffered?.map((skill) => (
@@ -171,19 +205,29 @@ const SwapRequestModal = ({ isOpen, onClose, targetUser, currentUser, onSubmit }
                 )) || []}
               </select>
               {errors.requestedSkill && (
-                <p className="mt-1 text-sm text-red-400">{errors.requestedSkill}</p>
+                <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.requestedSkill}
+                </p>
               )}
             </div>
 
             <div>
               <label className="label">
-                <span className="label-text text-white">I can teach you</span>
+                <span className="label-text text-white font-semibold flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  I can teach you
+                </span>
               </label>
               <select
                 name="offeredSkill"
                 value={formData.offeredSkill}
                 onChange={handleChange}
-                className={`select select-bordered w-full bg-white/5 border-cyan-500/20 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 ${errors.offeredSkill ? 'border-red-500' : ''}`}
+                className={`select w-full bg-gray-800/50 border-cyan-500/30 text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 rounded-lg transition-all duration-200 ${errors.offeredSkill ? 'border-red-500' : ''}`}
               >
                 <option value="">Select a skill</option>
                 {currentUser?.skillsOffered?.map((skill) => (
@@ -191,7 +235,12 @@ const SwapRequestModal = ({ isOpen, onClose, targetUser, currentUser, onSubmit }
                 )) || []}
               </select>
               {errors.offeredSkill && (
-                <p className="mt-1 text-sm text-red-400">{errors.offeredSkill}</p>
+                <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.offeredSkill}
+                </p>
               )}
             </div>
           </div>
@@ -199,79 +248,112 @@ const SwapRequestModal = ({ isOpen, onClose, targetUser, currentUser, onSubmit }
           {/* Proposed Time */}
           <div>
             <label className="label">
-              <span className="label-text text-white">Proposed Time</span>
+              <span className="label-text text-white font-semibold flex items-center gap-2">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                Proposed Time
+              </span>
             </label>
-            <select
-              name="proposedTime"
-              value={formData.proposedTime}
-              onChange={handleChange}
-              className={`select select-bordered w-full bg-white/5 border-cyan-500/20 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 ${errors.proposedTime ? 'border-red-500' : ''}`}
-            >
-              <option value="">Select a time</option>
-              <option value="Monday morning">Monday morning</option>
-              <option value="Monday afternoon">Monday afternoon</option>
-              <option value="Monday evening">Monday evening</option>
-              <option value="Tuesday morning">Tuesday morning</option>
-              <option value="Tuesday afternoon">Tuesday afternoon</option>
-              <option value="Tuesday evening">Tuesday evening</option>
-              <option value="Wednesday morning">Wednesday morning</option>
-              <option value="Wednesday afternoon">Wednesday afternoon</option>
-              <option value="Wednesday evening">Wednesday evening</option>
-              <option value="Thursday morning">Thursday morning</option>
-              <option value="Thursday afternoon">Thursday afternoon</option>
-              <option value="Thursday evening">Thursday evening</option>
-              <option value="Friday morning">Friday morning</option>
-              <option value="Friday afternoon">Friday afternoon</option>
-              <option value="Friday evening">Friday evening</option>
-              <option value="Saturday morning">Saturday morning</option>
-              <option value="Saturday afternoon">Saturday afternoon</option>
-              <option value="Saturday evening">Saturday evening</option>
-              <option value="Sunday morning">Sunday morning</option>
-              <option value="Sunday afternoon">Sunday afternoon</option>
-              <option value="Sunday evening">Sunday evening</option>
-            </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <select
+                name="proposedDay"
+                value={formData.proposedDay || ''}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    proposedDay: e.target.value,
+                    proposedTime: e.target.value && formData.proposedTimeSlot ? `${e.target.value} ${formData.proposedTimeSlot}` : ''
+                  }));
+                }}
+                className={`select w-full bg-gray-800/50 border-cyan-500/30 text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 rounded-lg transition-all duration-200 ${errors.proposedTime ? 'border-red-500' : ''}`}
+              >
+                <option value="">Select a day</option>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
+              </select>
+              
+              <select
+                name="proposedTimeSlot"
+                value={formData.proposedTimeSlot || ''}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    proposedTimeSlot: e.target.value,
+                    proposedTime: formData.proposedDay && e.target.value ? `${formData.proposedDay} ${e.target.value}` : ''
+                  }));
+                }}
+                className={`select w-full bg-gray-800/50 border-cyan-500/30 text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 rounded-lg transition-all duration-200 ${errors.proposedTime ? 'border-red-500' : ''}`}
+              >
+                <option value="">Select time</option>
+                <option value="morning">Morning</option>
+                <option value="afternoon">Afternoon</option>
+                <option value="evening">Evening</option>
+              </select>
+            </div>
             {errors.proposedTime && (
-              <p className="mt-1 text-sm text-red-400">{errors.proposedTime}</p>
+              <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                {errors.proposedTime}
+              </p>
             )}
           </div>
 
           {/* Message */}
           <div>
             <label className="label">
-              <span className="label-text text-white">Message</span>
+              <span className="label-text text-white font-semibold flex items-center gap-2">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                </svg>
+                Message
+              </span>
             </label>
             <textarea
               name="message"
               value={formData.message}
               onChange={handleChange}
-              className={`textarea textarea-bordered w-full h-24 bg-white/5 border-cyan-500/20 text-white placeholder-white/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 ${errors.message ? 'border-red-500' : ''}`}
-              placeholder="Introduce yourself and explain why you'd like to swap skills..."
+              placeholder="Tell them about your request and why you'd like to swap skills..."
+              rows="4"
+              className={`textarea w-full bg-gray-800/50 border-cyan-500/30 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 rounded-lg transition-all duration-200 resize-none ${errors.message ? 'border-red-500' : ''}`}
             />
             {errors.message && (
-              <p className="mt-1 text-sm text-red-400">{errors.message}</p>
+              <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                {errors.message}
+              </p>
             )}
           </div>
 
-          {/* Modal Actions */}
-          <div className="modal-action">
+          {/* Buttons */}
+          <div className="flex gap-4 pt-4">
             <button
               type="button"
-              className="btn btn-outline border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/10"
               onClick={handleClose}
               disabled={isLoading}
+              className="flex-1 btn btn-outline border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-all duration-300 rounded-lg"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white border-0 hover:shadow-cyan-500/20"
               disabled={isLoading}
+              className="flex-1 btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white border-0 hover:from-cyan-600 hover:to-cyan-700 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 rounded-lg font-semibold"
             >
               {isLoading ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Sending...
-                </>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Sending Request...
+                </div>
               ) : (
                 'Send Request'
               )}
@@ -279,7 +361,6 @@ const SwapRequestModal = ({ isOpen, onClose, targetUser, currentUser, onSubmit }
           </div>
         </form>
       </div>
-      <div className="modal-backdrop" onClick={handleClose}></div>
     </div>
   );
 };

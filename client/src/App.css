@@ -3,30 +3,30 @@
 
 /* Improve scroll performance */
 html {
-  scroll-behavior: smooth;
+    scroll-behavior: smooth;
 }
 
 body {
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Optimize for better performance */
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 /* Improve scroll performance on main content */
 main {
-  will-change: scroll-position;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+    will-change: scroll-position;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 /* Optimize navbar performance */
 nav {
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
