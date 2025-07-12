@@ -2,7 +2,7 @@
 
 A full-stack web platform for skill swapping, where users can list their own skills and request others in exchange. Designed to promote community collaboration, barter-based learning, and personal growth.
 
----
+-----
 
 ##  Project Overview
 
@@ -24,4 +24,4 @@ A full-stack web platform for skill swapping, where users can list their own ski
 - **Vishal Kumar**
 - **Lakshya Tatoo**
 
----
+-----
