@@ -354,6 +354,121 @@ router.put('/:requestId/complete', auth, async (req, res) => {
   }
 });
 
+// Submit feedback for a completed swap
+router.post('/:requestId/feedback', auth, async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { rating, comment } = req.body;
+
+    // Validate required fields
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
+    if (!comment || comment.trim().length === 0) {
+      return res.status(400).json({ message: 'Comment is required' });
+    }
+
+    const swapRequest = await SwapRequest.findById(requestId);
+    if (!swapRequest) {
+      return res.status(404).json({ message: 'Swap request not found' });
+    }
+
+    // Check if user is involved in the swap
+    if (swapRequest.fromUser.toString() !== req.user._id.toString() && 
+        swapRequest.toUser.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to submit feedback for this swap' });
+    }
+
+    // Check if request is completed
+    if (swapRequest.status !== 'completed') {
+      return res.status(400).json({ message: 'Can only submit feedback for completed swaps' });
+    }
+
+    // Check if user has already submitted feedback
+    const isFromUser = swapRequest.fromUser.toString() === req.user._id.toString();
+    if (isFromUser && swapRequest.fromUserRating) {
+      return res.status(400).json({ message: 'You have already submitted feedback for this swap' });
+    }
+    if (!isFromUser && swapRequest.toUserRating) {
+      return res.status(400).json({ message: 'You have already submitted feedback for this swap' });
+    }
+
+    // Update rating and feedback based on user role
+    if (isFromUser) {
+      swapRequest.fromUserRating = rating;
+      swapRequest.fromUserFeedback = comment.trim();
+    } else {
+      swapRequest.toUserRating = rating;
+      swapRequest.toUserFeedback = comment.trim();
+    }
+
+    await swapRequest.save();
+
+    // Update user ratings if both users have submitted feedback
+    if (swapRequest.fromUserRating && swapRequest.toUserRating) {
+      const fromUser = await User.findById(swapRequest.fromUser);
+      const toUser = await User.findById(swapRequest.toUser);
+
+      if (fromUser && toUser) {
+        // Get all completed swaps for both users
+        const fromUserSwaps = await SwapRequest.find({
+          $or: [{ fromUser: fromUser._id }, { toUser: fromUser._id }],
+          status: 'completed',
+          $or: [{ fromUserRating: { $exists: true } }, { toUserRating: { $exists: true } }]
+        });
+
+        const toUserSwaps = await SwapRequest.find({
+          $or: [{ fromUser: toUser._id }, { toUser: toUser._id }],
+          status: 'completed',
+          $or: [{ fromUserRating: { $exists: true } }, { toUserRating: { $exists: true } }]
+        });
+
+        // Calculate average ratings
+        const fromUserRatings = fromUserSwaps.map(swap => 
+          swap.fromUser.toString() === fromUser._id.toString() 
+            ? swap.fromUserRating 
+            : swap.toUserRating
+        ).filter(rating => rating);
+
+        const toUserRatings = toUserSwaps.map(swap => 
+          swap.fromUser.toString() === toUser._id.toString() 
+            ? swap.fromUserRating 
+            : swap.toUserRating
+        ).filter(rating => rating);
+
+        fromUser.rating = fromUserRatings.length > 0 
+          ? fromUserRatings.reduce((a, b) => a + b, 0) / fromUserRatings.length 
+          : 0;
+        toUser.rating = toUserRatings.length > 0 
+          ? toUserRatings.reduce((a, b) => a + b, 0) / toUserRatings.length 
+          : 0;
+
+        await fromUser.save();
+        await toUser.save();
+      }
+    }
+
+    // Populate user details for response
+    await swapRequest.populate([
+      { path: 'fromUser', select: 'name location rating swapCount' },
+      { path: 'toUser', select: 'name location rating swapCount' }
+    ]);
+
+    res.json({
+      message: 'Feedback submitted successfully',
+      swapRequest
+    });
+  } catch (error) {
+    console.error('Submit feedback error:', error);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    res.status(500).json({ message: 'Server error submitting feedback' });
+  }
+});
+
 // Get swap request by ID
 router.get('/:requestId', auth, async (req, res) => {
   try {
