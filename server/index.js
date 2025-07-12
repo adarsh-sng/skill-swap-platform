@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './db/db.js';
 import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js'
 
 dotenv.config();
 const app = express();
@@ -17,6 +18,8 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', function (req, res) {
     res.send('Welcome to SkillSwap API');
 })
+
+app.use('/api/users',userRoutes);
 app.use('/api/auth', authRoutes);
 
 connectDB().then(() => {
