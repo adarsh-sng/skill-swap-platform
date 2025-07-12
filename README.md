@@ -22,6 +22,6 @@ A full-stack web platform for skill swapping, where users can list their own ski
 - **Adarsh Singh**
 - **Kumar Ritesh Raushan**
 - **Vishal Kumar**
-- **Lakshay Tatoo**
+- **Lakshya Tatoo**
 
 ---
