@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { connectDB } from './db/db.js';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js'
+import swapRoutes from './routes/swap.routes.js';
 
 dotenv.config();
 const app = express();
@@ -19,8 +20,9 @@ app.get('/', function (req, res) {
     res.send('Welcome to SkillSwap API');
 })
 
-app.use('/api/users',userRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/users',userRoutes);
+app.use('/api/swaps', swapRoutes);
 
 connectDB().then(() => {
   app.listen(PORT, () => {

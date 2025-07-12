@@ -21,3 +21,12 @@ export const updateProfile = async (req, res) => {
     res.status(500).json({ message: 'Update failed' });
   }
 };
+
+export const getAllPublicUsers = async (req, res) => {
+  try {
+    const users = await User.find({ isPublic: true }).select('-password');
+    res.status(200).json(users);
+  } catch (err) {
+    res.status(500).json({ message: 'Could not fetch users' });
+  }
+};
