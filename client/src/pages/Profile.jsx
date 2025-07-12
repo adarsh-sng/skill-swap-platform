@@ -2,133 +2,63 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api';
+import ProfileModal from '../components/ProfileModal';
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('profile');
-  
-  // Profile form state
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Profile data state
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
-    email: user?.email || '',
     location: user?.location || '',
     bio: user?.bio || '',
-    isPublic: user?.isPublic ?? true
+    isPublic: user?.isPublic ?? true,
+    skillsOffered: user?.skillsOffered || [],
+    skillsWanted: user?.skillsWanted || [],
+    availability: user?.availability || {
+      monday: { morning: false, afternoon: false, evening: false },
+      tuesday: { morning: false, afternoon: false, evening: false },
+      wednesday: { morning: false, afternoon: false, evening: false },
+      thursday: { morning: false, afternoon: false, evening: false },
+      friday: { morning: false, afternoon: false, evening: false },
+      saturday: { morning: false, afternoon: false, evening: false },
+      sunday: { morning: false, afternoon: false, evening: false }
+    }
   });
 
-  // Skills state
-  const [skillsOffered, setSkillsOffered] = useState(user?.skillsOffered || []);
-  const [skillsWanted, setSkillsWanted] = useState(user?.skillsWanted || []);
-  const [newSkillOffered, setNewSkillOffered] = useState('');
-  const [newSkillWanted, setNewSkillWanted] = useState('');
-
-  // Availability state
-  const [availability, setAvailability] = useState(user?.availability || {
-    monday: { morning: false, afternoon: false, evening: false },
-    tuesday: { morning: false, afternoon: false, evening: false },
-    wednesday: { morning: false, afternoon: false, evening: false },
-    thursday: { morning: false, afternoon: false, evening: false },
-    friday: { morning: false, afternoon: false, evening: false },
-    saturday: { morning: false, afternoon: false, evening: false },
-    sunday: { morning: false, afternoon: false, evening: false }
-  });
-
-  // Update form data when user changes
+  // Update profile data when user changes
   useEffect(() => {
     if (user) {
       setProfileData({
         name: user.name || '',
-        email: user.email || '',
         location: user.location || '',
         bio: user.bio || '',
-        isPublic: user.isPublic ?? true
-      });
-      setSkillsOffered(user.skillsOffered || []);
-      setSkillsWanted(user.skillsWanted || []);
-      setAvailability(user.availability || {
-        monday: { morning: false, afternoon: false, evening: false },
-        tuesday: { morning: false, afternoon: false, evening: false },
-        wednesday: { morning: false, afternoon: false, evening: false },
-        thursday: { morning: false, afternoon: false, evening: false },
-        friday: { morning: false, afternoon: false, evening: false },
-        saturday: { morning: false, afternoon: false, evening: false },
-        sunday: { morning: false, afternoon: false, evening: false }
+        isPublic: user.isPublic ?? true,
+        skillsOffered: user.skillsOffered || [],
+        skillsWanted: user.skillsWanted || [],
+        availability: user.availability || {
+          monday: { morning: false, afternoon: false, evening: false },
+          tuesday: { morning: false, afternoon: false, evening: false },
+          wednesday: { morning: false, afternoon: false, evening: false },
+          thursday: { morning: false, afternoon: false, evening: false },
+          friday: { morning: false, afternoon: false, evening: false },
+          saturday: { morning: false, afternoon: false, evening: false },
+          sunday: { morning: false, afternoon: false, evening: false }
+        }
       });
     }
   }, [user]);
 
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-  const timeSlots = ['morning', 'afternoon', 'evening'];
-
-  // Add skill offered
-  const addSkillOffered = () => {
-    if (newSkillOffered.trim() && !skillsOffered.includes(newSkillOffered.trim())) {
-      setSkillsOffered([...skillsOffered, newSkillOffered.trim()]);
-      setNewSkillOffered('');
-    }
-  };
-
-  // Remove skill offered
-  const removeSkillOffered = (skill) => {
-    setSkillsOffered(skillsOffered.filter(s => s !== skill));
-  };
-
-  // Add skill wanted
-  const addSkillWanted = () => {
-    if (newSkillWanted.trim() && !skillsWanted.includes(newSkillWanted.trim())) {
-      setSkillsWanted([...skillsWanted, newSkillWanted.trim()]);
-      setNewSkillWanted('');
-    }
-  };
-
-  // Remove skill wanted
-  const removeSkillWanted = (skill) => {
-    setSkillsWanted(skillsWanted.filter(s => s !== skill));
-  };
-
-  // Toggle availability
-  const toggleAvailability = (day, timeSlot) => {
-    setAvailability(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [timeSlot]: !prev[day][timeSlot]
-      }
-    }));
-  };
-
   // Save profile
-  const saveProfile = async () => {
+  const saveProfile = async (updatedData) => {
     setIsLoading(true);
     try {
-      // Validate required fields
-      if (!profileData.name || profileData.name.trim() === '') {
-        toast.error('Name is required', {
-          description: 'Please enter your full name before saving.',
-          duration: 4000,
-        });
-        return;
-      }
-
-      const requestData = {
-        name: profileData.name.trim(),
-        location: profileData.location?.trim() || '',
-        bio: profileData.bio?.trim() || '',
-        isPublic: profileData.isPublic,
-        skillsOffered,
-        skillsWanted,
-        availability
-      };
-      
-      console.log('Sending profile update request:', requestData);
-      
-      const response = await apiService.updateProfile(requestData);
+      const response = await apiService.updateProfile(updatedData);
       
       // Update local state with the response from the server
       updateUser(response.user);
-      setIsEditing(false);
       
       toast.success('Profile updated successfully!', {
         description: 'Your profile has been saved to the database.',
@@ -140,295 +70,188 @@ const Profile = () => {
         description: error.message || 'Please try again later.',
         duration: 4000,
       });
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Cancel editing
-  const cancelEditing = () => {
-    setProfileData({
-      name: user?.name || '',
-      email: user?.email || '',
-      location: user?.location || '',
-      bio: user?.bio || '',
-      isPublic: user?.isPublic ?? true
-    });
-    setSkillsOffered(user?.skillsOffered || []);
-    setSkillsWanted(user?.skillsWanted || []);
-    setAvailability(user?.availability || {
-      monday: { morning: false, afternoon: false, evening: false },
-      tuesday: { morning: false, afternoon: false, evening: false },
-      wednesday: { morning: false, afternoon: false, evening: false },
-      thursday: { morning: false, afternoon: false, evening: false },
-      friday: { morning: false, afternoon: false, evening: false },
-      saturday: { morning: false, afternoon: false, evening: false },
-      sunday: { morning: false, afternoon: false, evening: false }
-    });
-    setIsEditing(false);
+  const getAvailabilityText = () => {
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const availableDays = days.filter(day => 
+      Object.values(profileData.availability[day]).some(slot => slot)
+    );
+    
+    if (availableDays.length === 0) return 'No availability set';
+    if (availableDays.length <= 2) return availableDays.map(day => day.charAt(0).toUpperCase() + day.slice(1)).join(', ');
+    return `${availableDays.length} days available`;
   };
 
+  const getSkillCount = (skills) => {
+    return skills ? skills.length : 0;
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-black text-gray-100 p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-black">
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2 text-white">Profile Settings</h1>
-          <p className="text-gray-400">Manage your profile, skills, and availability</p>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">My Profile</h1>
+          <p className="text-gray-400">Manage your profile and preferences</p>
         </div>
 
-        {/* Tabs */}
-        <div className="tabs tabs-boxed bg-black/40 backdrop-blur-lg border border-cyan-500/20 mb-6">
-          <button 
-            className={`tab ${activeTab === 'profile' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('profile')}
-          >
-            Profile Info
-          </button>
-          <button 
-            className={`tab ${activeTab === 'skills' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('skills')}
-          >
-            Skills
-          </button>
-          <button 
-            className={`tab ${activeTab === 'availability' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('availability')}
-          >
-            Availability
-          </button>
-        </div>
-
-        {/* Profile Info Tab */}
-        {activeTab === 'profile' && (
-          <div className="card bg-black/40 backdrop-blur-lg border border-cyan-500/20 shadow-[0_0_50px_-12px_rgba(0,255,255,0.25)]">
-            <div className="card-body">
-              <h2 className="card-title mb-6">Profile Information</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="label">
-                    <span className="label-text">Full Name</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={profileData.name}
-                    onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                    disabled={!isEditing}
-                    className="input input-bordered w-full bg-white/5 border-cyan-500/20 text-white placeholder-white/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-                    placeholder="Enter your full name"
-                  />
-                </div>
-
-                <div>
-                  <label className="label">
-                    <span className="label-text">Email</span>
-                  </label>
-                  <input
-                    type="email"
-                    value={profileData.email}
-                    disabled
-                    className="input input-bordered w-full bg-gray-700/50 border-cyan-500/20 text-white"
-                    placeholder="Your email"
-                  />
-                </div>
-
-                <div>
-                  <label className="label">
-                    <span className="label-text">Location</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={profileData.location}
-                    onChange={(e) => setProfileData({...profileData, location: e.target.value})}
-                    disabled={!isEditing}
-                    className="input input-bordered w-full bg-white/5 border-cyan-500/20 text-white placeholder-white/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-                    placeholder="Enter your location"
-                  />
-                </div>
-
-                <div>
-                  <label className="label">
-                    <span className="label-text">Profile Visibility</span>
-                  </label>
-                  <select
-                    value={profileData.isPublic ? 'public' : 'private'}
-                    onChange={(e) => setProfileData({...profileData, isPublic: e.target.value === 'public'})}
-                    disabled={!isEditing}
-                    className="select select-bordered w-full bg-white/5 border-cyan-500/20 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-                  >
-                    <option value="public">Public</option>
-                    <option value="private">Private</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="label">
-                  <span className="label-text">Bio</span>
-                </label>
-                <textarea
-                  value={profileData.bio}
-                  onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
-                  disabled={!isEditing}
-                  className="textarea textarea-bordered w-full h-32 bg-white/5 border-cyan-500/20 text-white placeholder-white/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-                  placeholder="Tell others about yourself and your skills..."
-                />
-              </div>
-
-              <div className="card-actions justify-end mt-6">
-                {!isEditing ? (
-                  <button 
-                    className="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white border-0 hover:shadow-cyan-500/20"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    Edit Profile
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button 
-                      className="btn btn-outline border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/10"
-                      onClick={cancelEditing}
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      className="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white border-0 hover:shadow-cyan-500/20"
-                      onClick={saveProfile}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <>
-                          <span className="loading loading-spinner loading-sm"></span>
-                          Saving...
-                        </>
-                      ) : (
-                        'Save Changes'
-                      )}
-                    </button>
+        {/* Profile Card */}
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-8 shadow-[0_8px_32px_rgba(0,255,255,0.1)]">
+            {/* Profile Header */}
+            <div className="flex items-start justify-between mb-8">
+              <div className="flex items-center gap-6">
+                <div className="relative">
+                  <div className="w-24 h-24 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-full flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-cyan-500/25">
+                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Skills Tab */}
-        {activeTab === 'skills' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Skills Offered */}
-            <div className="card bg-black/40 backdrop-blur-lg border border-cyan-500/20 shadow-[0_0_50px_-12px_rgba(0,255,255,0.25)]">
-              <div className="card-body">
-                <h2 className="card-title mb-6">Skills I Can Offer</h2>
-                
-                <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={newSkillOffered}
-                    onChange={(e) => setNewSkillOffered(e.target.value)}
-                    className="input input-bordered flex-1 bg-white/5 border-cyan-500/20 text-white placeholder-white/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-                    placeholder="Add a skill (e.g., Photoshop, Excel)"
-                    onKeyPress={(e) => e.key === 'Enter' && addSkillOffered()}
-                  />
-                  <button 
-                    className="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white border-0 hover:shadow-cyan-500/20"
-                    onClick={addSkillOffered}
-                  >
-                    Add
-                  </button>
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-gray-900"></div>
                 </div>
-
-                <div className="space-y-2">
-                  {skillsOffered.map((skill, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/20 rounded-lg">
-                      <span>{skill}</span>
-                      <button 
-                        className="btn btn-sm btn-error"
-                        onClick={() => removeSkillOffered(skill)}
-                      >
-                        Remove
-                      </button>
+                <div>
+                  <h2 className="text-3xl font-bold text-white mb-2">{user.name}</h2>
+                  <p className="text-gray-400 text-lg flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                    {user.location || 'Location not set'}
+                  </p>
+                  <div className="flex items-center gap-4 mt-2">
+                    <div className="rating rating-sm">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <input
+                          key={star}
+                          type="radio"
+                          name="user-rating"
+                          className="mask mask-star-2 bg-orange-400"
+                          checked={star <= (user.rating || 0)}
+                          readOnly
+                        />
+                      ))}
                     </div>
-                  ))}
-                  {skillsOffered.length === 0 && (
-                    <p className="text-gray-400 text-center py-4">No skills added yet</p>
+                    <span className="text-gray-300">
+                      {user.rating ? `${user.rating.toFixed(1)}/5` : 'No ratings'}
+                    </span>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-gray-300">{user.swapCount || 0} swaps</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white border-0 hover:from-cyan-600 hover:to-cyan-700 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 rounded-xl font-semibold px-6"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Profile
+              </button>
+            </div>
+
+            {/* Bio */}
+            {user.bio && (
+              <div className="mb-8 p-6 bg-gray-800/50 rounded-xl border border-gray-700/50">
+                <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                  </svg>
+                  About Me
+                </h3>
+                <p className="text-gray-300 leading-relaxed">{user.bio}</p>
+              </div>
+            )}
+
+            {/* Skills Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              {/* Skills Offered */}
+              <div className="p-6 bg-gradient-to-r from-cyan-500/10 to-cyan-600/10 rounded-xl border border-cyan-500/30">
+                <h3 className="font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Skills I Can Teach ({getSkillCount(user.skillsOffered)})
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {user.skillsOffered && user.skillsOffered.length > 0 ? (
+                    user.skillsOffered.map((skill, index) => (
+                      <span key={index} className="badge bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-2 rounded-lg font-medium">
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-gray-400 text-sm">No skills added yet</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Skills Wanted */}
+              <div className="p-6 bg-gradient-to-r from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/30">
+                <h3 className="font-semibold text-purple-400 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" />
+                  </svg>
+                  Skills I Want to Learn ({getSkillCount(user.skillsWanted)})
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {user.skillsWanted && user.skillsWanted.length > 0 ? (
+                    user.skillsWanted.map((skill, index) => (
+                      <span key={index} className="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-2 rounded-lg font-medium">
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-gray-400 text-sm">No skills added yet</p>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Skills Wanted */}
-            <div className="card bg-black/40 backdrop-blur-lg border border-cyan-500/20 shadow-[0_0_50px_-12px_rgba(0,255,255,0.25)]">
-              <div className="card-body">
-                <h2 className="card-title mb-6">Skills I Want to Learn</h2>
-                
-                <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={newSkillWanted}
-                    onChange={(e) => setNewSkillWanted(e.target.value)}
-                    className="input input-bordered flex-1 bg-white/5 border-cyan-500/20 text-white placeholder-white/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-                    placeholder="Add a skill (e.g., Guitar, Cooking)"
-                    onKeyPress={(e) => e.key === 'Enter' && addSkillWanted()}
-                  />
-                  <button 
-                    className="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white border-0 hover:shadow-cyan-500/20"
-                    onClick={addSkillWanted}
-                  >
-                    Add
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {skillsWanted.map((skill, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white/5 border border-cyan-500/20 rounded-lg">
-                      <span>{skill}</span>
-                      <button 
-                        className="btn btn-sm btn-error"
-                        onClick={() => removeSkillWanted(skill)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                  {skillsWanted.length === 0 && (
-                    <p className="text-gray-400 text-center py-4">No skills wanted yet</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Availability Tab */}
-        {activeTab === 'availability' && (
-          <div className="card bg-black/40 backdrop-blur-lg border border-cyan-500/20 shadow-[0_0_50px_-12px_rgba(0,255,255,0.25)]">
-            <div className="card-body">
-              <h2 className="card-title mb-6">Availability Schedule</h2>
-              <p className="text-gray-400 mb-6">Select the times when you're available for skill swaps</p>
+            {/* Availability Section */}
+            <div className="p-6 bg-gray-800/30 rounded-xl border border-gray-700/30">
+              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                Availability
+              </h3>
+              <p className="text-gray-300 mb-4">{getAvailabilityText()}</p>
               
               <div className="overflow-x-auto">
                 <table className="table w-full">
                   <thead>
                     <tr>
-                      <th className="bg-white/5 border border-cyan-500/20">Day</th>
-                      <th className="bg-white/5 border border-cyan-500/20">Morning</th>
-                      <th className="bg-white/5 border border-cyan-500/20">Afternoon</th>
-                      <th className="bg-white/5 border border-cyan-500/20">Evening</th>
+                      <th className="bg-gray-700 text-white">Day</th>
+                      <th className="bg-gray-700 text-white">Morning</th>
+                      <th className="bg-gray-700 text-white">Afternoon</th>
+                      <th className="bg-gray-700 text-white">Evening</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {days.map((day) => (
-                      <tr key={day} className="hover:bg-white/5">
-                        <td className="font-medium capitalize">{day}</td>
-                        {timeSlots.map((timeSlot) => (
-                          <td key={timeSlot}>
-                            <input
-                              type="checkbox"
-                              className="toggle toggle-primary"
-                              checked={availability[day][timeSlot]}
-                              onChange={() => toggleAvailability(day, timeSlot)}
-                            />
+                    {Object.entries(profileData.availability).map(([day, timeSlots]) => (
+                      <tr key={day} className="hover:bg-gray-700/50">
+                        <td className="font-medium text-white capitalize">{day}</td>
+                        {Object.entries(timeSlots).map(([timeSlot, isAvailable]) => (
+                          <td key={timeSlot} className="text-center">
+                            <div className={`w-5 h-5 mx-auto rounded-md ${
+                              isAvailable
+                                ? 'bg-gradient-to-br from-green-400 to-green-600 shadow-lg shadow-green-500/25'
+                                : 'bg-gray-700 border border-gray-600'
+                            }`} />
                           </td>
                         ))}
                       </tr>
@@ -436,26 +259,33 @@ const Profile = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
 
-              <div className="card-actions justify-end mt-6">
-                <button 
-                  className="btn bg-gradient-to-r from-cyan-500 to-cyan-600 text-white border-0 hover:shadow-cyan-500/20"
-                  onClick={saveProfile}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <span className="loading loading-spinner loading-sm"></span>
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Availability'
-                  )}
-                </button>
+            {/* Profile Status */}
+            <div className="mt-8 p-4 bg-gray-800/30 rounded-xl border border-gray-700/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${user.isPublic ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <span className="text-gray-300">
+                    Profile is {user.isPublic ? 'public' : 'private'}
+                  </span>
+                </div>
+                <span className="text-sm text-gray-400">
+                  Member since {new Date(user.createdAt).toLocaleDateString()}
+                </span>
               </div>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Profile Modal */}
+        <ProfileModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={saveProfile}
+          profileData={profileData}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   );
