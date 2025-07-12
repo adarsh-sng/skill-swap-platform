@@ -1,4 +1,4 @@
-import Swap from '../models/swap.model.js';
+import Swap from '../models/SwapRequest.js';
 
 export const createSwap = async (req, res) => {
   const { toUser, message } = req.body;
